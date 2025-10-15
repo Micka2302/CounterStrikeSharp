@@ -208,16 +208,17 @@ void CounterStrikeSharpMMPlugin::Hook_StartupServer(const GameSessionConfigurati
 {
     globals::entitySystem = interfaces::pGameResourceServiceServer->GetGameEntitySystem();
 
-    // Temporary hack until CGameEntitySystem is updated in the sdk
-#ifdef PLATFORM_LINUX
-    int offset = 8512;
-#else
-    int offset = 8480;
-#endif
+    if (!globals::entitySystem)
+    {
+        CSSHARP_CORE_ERROR("Failed to obtain CGameEntitySystem instance during server startup.");
+        return;
+    }
 
-    auto pListeners = (CUtlVector<IEntityListener*>*)((byte*)globals::entitySystem + offset);
+    auto entityListener = &globals::entityManager.entityListener;
 
-    if (pListeners->Find(&globals::entityManager.entityListener) == -1) pListeners->AddToTail(&globals::entityManager.entityListener);
+    // Make sure we do not register multiple times across restarts.
+    globals::entitySystem->RemoveListenerEntity(entityListener);
+    globals::entitySystem->AddListenerEntity(entityListener);
 
     globals::timerSystem.OnStartupServer();
 
