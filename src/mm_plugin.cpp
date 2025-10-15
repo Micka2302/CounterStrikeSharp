@@ -165,6 +165,7 @@ bool CounterStrikeSharpMMPlugin::Load(PluginId id, ISmmAPI* ismm, char* error, s
     globals::mmPlugin = &gPlugin;
 
     CALL_GLOBAL_LISTENER(OnAllInitialized());
+    CSSHARP_CORE_INFO("Global listeners initialized.");
 
     on_activate_callback = globals::callbackManager.CreateCallback("OnMapStart");
     on_metamod_all_plugins_loaded_callback = globals::callbackManager.CreateCallback("OnMetamodAllPluginsLoaded");
@@ -177,10 +178,18 @@ bool CounterStrikeSharpMMPlugin::Load(PluginId id, ISmmAPI* ismm, char* error, s
     SH_ADD_HOOK_MEMFUNC(IEngineServiceMgr, FindService, globals::engineServiceManager, this, &CounterStrikeSharpMMPlugin::Hook_FindService,
                         true);
 
-    auto pCGameEventManagerVTable = (IGameEventManager2*)modules::server->FindVirtualTable("CGameEventManager");
+    auto pCGameEventManagerVTable = static_cast<IGameEventManager2*>(modules::server->FindVirtualTable("CGameEventManager"));
 
-    g_iLoadEventsFromFileId = SH_ADD_DVPHOOK(IGameEventManager2, LoadEventsFromFile, pCGameEventManagerVTable,
-                                             SH_MEMBER(this, &CounterStrikeSharpMMPlugin::Hook_LoadEventsFromFile), false);
+    if (pCGameEventManagerVTable != nullptr)
+    {
+        g_iLoadEventsFromFileId = SH_ADD_DVPHOOK(IGameEventManager2, LoadEventsFromFile, pCGameEventManagerVTable,
+                                                 SH_MEMBER(this, &CounterStrikeSharpMMPlugin::Hook_LoadEventsFromFile), false);
+        CSSHARP_CORE_INFO("Event manager hook installed.");
+    }
+    else
+    {
+        CSSHARP_CORE_ERROR("Failed to locate CGameEventManager virtual table. Event hooks disabled.");
+    }
 
     if (!InitGameSystems())
     {

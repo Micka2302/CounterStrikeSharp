@@ -25,6 +25,7 @@
 #include "core/managers/player_manager.h"
 #include "scripting/callback_manager.h"
 #include <tier0/vprof.h>
+#include <cstdint>
 
 CBaseGameSystemFactory** CBaseGameSystemFactory::sm_pFirst = nullptr;
 
@@ -38,13 +39,15 @@ bool InitGameSystems()
 {
     // This signature directly points to the instruction referencing sm_pFirst, and the opcode is 3
     // bytes so we skip those
-    uint8* ptr = (uint8*)counterstrikesharp::globals::gameConfig->ResolveSignature("IGameSystem_InitAllSystems_pFirst") + 3;
+    void* signature = counterstrikesharp::globals::gameConfig->ResolveSignature("IGameSystem_InitAllSystems_pFirst");
 
-    if (!ptr)
+    if (signature == nullptr)
     {
         CSSHARP_CORE_ERROR("Failed to InitGameSystems, see warnings above.");
         return false;
     }
+
+    auto ptr = static_cast<uint8_t*>(signature) + 3;
 
     // Grab the offset as 4 bytes
     uint32 offset = *(uint32*)ptr;
